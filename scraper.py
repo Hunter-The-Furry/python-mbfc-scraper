@@ -20,7 +20,8 @@ if "data" not in currentdir:
 driver = webdriver.Firefox(options=op)
 
 # List of categories for mediabiasfactcheck, their inconsistent on the website, it's not a typo on my end I swear.
-cats = {"left", "leftcenter", "center", "right-center", "right", "conspiracy", "fake-news", "pro-science", "satire"}
+cats = {"left", "leftcenter", "center", "right-center",
+        "right", "conspiracy", "fake-news", "pro-science", "satire"}
 # Do a loop for each category
 for category in cats:
     # Connect to the webpage
@@ -38,8 +39,9 @@ for category in cats:
     soup = BeautifulSoup(content, features="html.parser")
 
     # Find the table and then rows of the news groups
-    table = soup.find(lambda tag: tag.name=='table' and tag.has_attr('id') and tag['id']=="mbfc-table")
-    rows = table.findAll(lambda tag: tag.name=='tr')
+    table = soup.find(lambda tag: tag.name == 'table' and tag.has_attr(
+        'id') and tag['id'] == "mbfc-table")
+    rows = table.findAll(lambda tag: tag.name == 'tr')
 
     # Append each group name and the href link to the respective prebuilt dictionaries
     for row in rows:
@@ -51,12 +53,26 @@ for category in cats:
         except:
             try:
                 href.append(row.contents[0].contents[0].attrs["href"])
-            except:
+            except:  # This means that it's an advert row in the table so we'll remove it.
                 href.append(" ")
 
     for url in href:
         links.append("https://mediabiasfactcheck.com" + str(url))
 
     # Frame the dictionaries and save them to csv using Pandas
-    df = pd.DataFrame({'Group': group, 'links': links},)
-    df.to_csv(f'data/{category}.csv', index=False, encoding='utf-8')
+    df = pd.DataFrame({'Group': group, 'Link': links, "Type": category},)
+    noadvert = df[~(df["Group"] == " ")]
+    noadvert.to_csv(f'data/{category}.csv', index=False, encoding='utf-8')
+
+driver.quit()
+files = os.listdir("data")
+try:
+    files.remove("all.csv")
+except:
+    pass
+if not os.path.exists("./data/all.csv"):
+    open("./data/all.csv", 'w').close()
+# Consolidate all CSV files into one object
+allcsv = pd.concat([pd.read_csv("./data/"+file) for file in files])
+# Convert the above object into a csv file and export
+allcsv.to_csv("./data/all.csv", index=False, encoding="utf-8")
